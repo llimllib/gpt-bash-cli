@@ -6,9 +6,9 @@ An extremely simple interface to the openai API, written in bash. Here's an exam
 $ gpt how do I output red text in the console using tput
 To output red text in the console using tput, you can use the following command:
 
-\```
+```
 tput setaf 1; echo "This text is in red"; tput sgr0
-\```
+```
 
 Explanation:
 
@@ -52,9 +52,9 @@ copy them to somewhere on your path and make sure they're executable (with
 $ gpt how do I output red text in the console using tput
 To output red text in the console using tput, you can use the following command:
 
-\```
+```
 tput setaf 1; echo "This text is in red"; tput sgr0
-\```
+```
 
 Explanation:
 
