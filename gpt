@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+#
+# Installation (OS X):
+#
+# - save this file as "gpt" somewhere in your path
+# - get an openai api key at: https://platform.openai.com/account/api-keys
+# - save the openai api key to your keychain with:
+#     security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'
+# - If you don't already have `jq`, install it with `brew install jq` or whatever
+#
+# If you prefer, you can put your API key directly in here or modify the 
+# `OPENAIKEY` line to use your preferred secrets manager
+
+OPENAIKEY=$(security find-generic-password -w -s 'openai')
+MODEL="gpt-3.5-turbo"
+TEMPERATURE="0.7"
+VERBOSE=
+
+function usage {
+    cat <<EOF
+gpt [-vh] [-m <model>] [-t <temperature>] <description>
+
+chat with openai's /chat/completions endpoint
+
+FLAGS: 
+
+    -v, --verbose: print the URL of the image and the filename when done
+    -h, --help: print this help and exit
+    -m, --model: set the model you want to use. Defaults to $MODEL
+    -t, --temperature: set the temperature. Defaults to $TEMPERATURE
+
+EXAMPLE USAGE:
+
+    gpt write a bash script that uses curl to access the openai API
+EOF
+exit 1
+}
+
+function gptrequest {
+    cat <<EOF
+{
+  "model": "$MODEL",
+  "messages": [{
+    "role": "user",
+    "content": "$@"
+  }],
+  "temperature": $TEMPERATURE
+}
+EOF
+}
+
+function gpt {
+    if res=$(curl https://api.openai.com/v1/chat/completions -s \
+        -H 'Content-Type: application/json' \
+        -H "Authorization: Bearer $OPENAIKEY" \
+        -d "$(gptrequest "$@")"); then
+        # if there's an "error" key in the return value, we didn't succeed.
+        # Print and quit
+        if echo "$res" | jq -e 'has("error")' &> /dev/null ; then
+            echo "error: $res"
+            exit 1
+        fi
+
+        # print the raw response from openai if verbose is set
+        if [[ -n $VERBOSE ]]; then
+            echo "response from openai: $res"
+        fi
+
+        echo "$res" | jq -r '.choices[0].message.content'
+    fi
+}
+
+case $1 in
+    help | -h | --help)
+        usage
+        ;;
+    -m | --model)
+        shift
+        MODEL=$1
+        shift
+        ;;
+    -t | --temperature)
+        shift
+        TEMPERATURE=$1
+        shift
+        ;;
+    -v | --verbose)
+        VERBOSE=true
+        shift
+        ;;
+    -vv | --very-verbose)
+        set -x
+        shift
+        ;;
+esac
+
+if [[ -z $OPENAIKEY ]]; then
+    tput setaf 1
+    printf "ERROR: unable to find an openAI API key.\n\n"
+    tput sgr0
+    printf "You can set one by editing this script directly or, if you're on a mac, using:\n\n    security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'\n\n"
+    exit 1
+fi
+
+gpt "$@"

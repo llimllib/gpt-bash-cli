@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+#
+# Installation (OS X):
+#
+# - save this file as "gpti" somewhere in your path
+# - get an openai api key at: https://platform.openai.com/account/api-keys
+# - save the openai api key to your keychain with:
+#     security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'
+# - If you don't already have `jq`, install it with `brew install jq` or whatever
+# - optional, if using iterm2: install `imgcat` somewhere in your path:
+#     - https://iterm2.com/utilities/imgcat
+#
+# If you prefer, you can put your API key directly in here or modify the 
+# `OPENAIKEY` line to use your preferred secrets manager
+
+OPENAIKEY=$(security find-generic-password -w -s 'openai')
+SIZE="1024x1024"
+VERBOSE=
+
+function usage {
+    cat <<EOF
+gpti [-vh] <description>
+
+generates an image via openai's /images/generations endpoint
+
+FLAGS: 
+
+    -v, --verbose: print the URL of the image and the filename when done
+    -h, --help: print this help and exit
+
+EXAMPLE USAGE:
+
+    gpti a drone photo of fenway park on opening day
+EOF
+exit 1
+}
+
+function gptirequest {
+    cat <<EOF
+{
+  "prompt": "$@",
+  "n": 1,
+  "size": "$SIZE"
+}
+EOF
+}
+
+function gpti {
+    f="$(mktemp -t gpti).png"
+    if res=$(curl https://api.openai.com/v1/images/generations -s \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $OPENAIKEY" \
+        -d "$(gptirequest "$@")"); then
+        # if there's an "error" key in the return value, we didn't succeed.
+        # Print and quit
+        if echo "$res" | jq -e 'has("error")' &> /dev/null ; then
+            echo "error: $res"
+            exit 1
+        fi
+        url=$(echo "$res" | jq -r '.data[0].url')
+    else
+        echo "error: $res"
+        exit 1
+    fi
+
+    # download the image to a tempfile, and print it to the terminal
+    curl -s "$url" -o "$f"
+
+    # if imgcat is present, try outputting the image to the terminal
+    if which imgcat &> /dev/null ; then
+        imgcat < "$f"
+    fi
+
+    if [[ -n $VERBOSE ]]; then
+        echo "URL: $url"
+        echo "file: $f"
+    fi
+}
+
+case $1 in
+    help | -h | --help)
+        usage
+        ;;
+    -v | --verbose)
+        VERBOSE=true
+        shift
+        ;;
+    -vv | --very-verbose)
+        set -x
+        shift
+        ;;
+esac
+
+gpti "$@"
