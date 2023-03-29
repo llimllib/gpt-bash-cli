@@ -109,4 +109,6 @@ function gpt_usage() {
 This function prints out the usage information for a command line GPT interface, including the available options and an example usage. The user can call this function by typing `gpt_usage` in the terminal.
 ````
 
+![](images/fenway.png)
+
 ![](images/example1.png)
