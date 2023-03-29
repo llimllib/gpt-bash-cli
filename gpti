@@ -18,7 +18,7 @@ SIZE="1024x1024"
 VERBOSE=
 
 function usage {
-    cat <<EOF
+    cat <<"EOF"
 gpti [-vh] <description>
 
 generates an image via openai's /images/generations endpoint
@@ -31,6 +31,12 @@ FLAGS:
 EXAMPLE USAGE:
 
     gpti a drone photo of fenway park on opening day
+
+NOTE:
+
+    All images are downloaded into your temp directory and the filename
+    will begin with `gpti_<day>_<time>` so that you can find them later
+    if you need them.
 EOF
 exit 1
 }
@@ -46,7 +52,8 @@ EOF
 }
 
 function gpti {
-    f="$(mktemp -t gpti).png"
+    dt=$(date +"%Y%m%d_%H%M")
+    f="$(mktemp -t "gpti_$dt").png"
     if res=$(curl https://api.openai.com/v1/images/generations -s \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $OPENAIKEY" \
@@ -68,6 +75,7 @@ function gpti {
 
     # if imgcat is present, try outputting the image to the terminal
     if which imgcat &> /dev/null ; then
+        echo
         imgcat < "$f"
     fi
 
