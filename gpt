@@ -50,6 +50,7 @@ EOF
 }
 
 function gpt {
+    # https://platform.openai.com/docs/api-reference/chat
     if res=$(curl https://api.openai.com/v1/chat/completions -s \
         -H 'Content-Type: application/json' \
         -H "Authorization: Bearer $OPENAIKEY" \
