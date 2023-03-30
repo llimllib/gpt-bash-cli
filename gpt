@@ -15,6 +15,8 @@ OPENAIKEY=$(security find-generic-password -w -s 'openai')
 MODEL="gpt-3.5-turbo"
 TEMPERATURE="0.7"
 VERBOSE=
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gpt-bash"
+DB="${DATA_DIR}/openai.sqlite3"
 
 function usage {
     cat <<EOF
@@ -28,6 +30,11 @@ FLAGS:
     -h, --help: print this help and exit
     -m, --model: set the model you want to use. Defaults to $MODEL
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
+
+STORAGE:
+
+    This script will store all requests to and responses from openai in a
+    sqlite database in $DATA_DIR, in the "chat_completions" table
 
 EXAMPLE USAGE:
 
@@ -51,10 +58,23 @@ EOF
 
 function gpt {
     # https://platform.openai.com/docs/api-reference/chat
+    request=$(gptrequest "$@")
     if res=$(curl https://api.openai.com/v1/chat/completions -s \
         -H 'Content-Type: application/json' \
         -H "Authorization: Bearer $OPENAIKEY" \
-        -d "$(gptrequest "$@")"); then
+        -d "$request"); then
+
+        # insert the request and response into the database. The funny-looking
+        # search and replaces turn single quotes (') into doubled single quotes
+        # (''), which is how sqlite wants you to escape them. It _seems_ that
+        # the only thing we need to escape are single quotes, but maybe this is
+        # an injection vector Iunno. Strings in bash, amirite?
+        sqlite3 "$DB" <<EOF
+INSERT INTO chat_completions VALUES(
+    '${request//"'"/"''"}',
+    '${res//"'"/"''"}');
+EOF
+
         # if there's an "error" key in the return value, we didn't succeed.
         # Print and quit
         if echo "$res" | jq -e 'has("error")' &> /dev/null ; then
@@ -68,6 +88,14 @@ function gpt {
         fi
 
         echo "$res" | jq -r '.choices[0].message.content'
+    else
+        sqlite3 "$DB" <<EOF
+INSERT INTO images_generations VALUES( '${request//"'"/"''"}', '');
+EOF
+        tput setaf 1
+        echo "error: $res"
+        tput sgr0
+        exit 1
     fi
 }
 
@@ -102,5 +130,21 @@ if [[ -z $OPENAIKEY ]]; then
     printf "You can set one by editing this script directly or, if you're on a mac, using:\n\n    security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'\n\n"
     exit 1
 fi
+
+# if the directory for storing our database (~/.local/share/gpt-bash/ by
+# default) doesn't exist, create it
+if [ ! -d "$DATA_DIR" ]; then
+    mkdir -p "$DATA_DIR"
+fi
+
+# if our table doesn't exist, create a table to use. I'm YOLOing versioning
+# here
+sqlite3 "$DB" <<EOF
+CREATE TABLE IF NOT EXISTS chat_completions(
+    query text,   -- the JSON query sent to openai
+    response text -- the JSON response received from openai
+);
+EOF
+
 
 gpt "$@"

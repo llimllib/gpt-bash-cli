@@ -46,6 +46,18 @@ There are two scripts in this repository, `gpt` and `gpti`. To install them,
 copy them to somewhere on your path and make sure they're executable (with
 `chmod a+x gpt`, for example)
 
+**NOTE**: mac systems have a `gpt` binary installed in `/usr/sbin` by default.
+Either put the directory containing `gpt` in a path that gets searched before
+`/usr/sbin`, or give it another name
+
+## Storage
+
+Each script stores all requests and responses in a sqlite database, located
+in your `XDG_DATA_HOME` directory, which defaults to `$HOME/.local/share`.
+
+For most people the database will be located at
+`~/.local/share/gpt-bash/openai.sqlite3`
+
 ## Usage
 
 Each script has help output documenting all options.
@@ -64,6 +76,11 @@ FLAGS:
     -m, --model: set the model you want to use. Defaults to $MODEL
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
 
+STORAGE:
+
+    This script will store all requests to and responses from openai in a
+    sqlite database in $DATA_DIR, in the "chat_completions" table
+
 EXAMPLE USAGE:
 
     gpt write a bash script that uses curl to access the openai API
@@ -80,6 +97,11 @@ FLAGS:
 
     -v, --verbose: print the URL of the image and the filename when done
     -h, --help: print this help and exit
+
+STORAGE:
+
+    This script will store all requests to and responses from openai in a
+    sqlite database in $DATA_DIR, in the "images_generations" table
 
 EXAMPLE USAGE:
     gpti a drone photo of fenway park on opening day
