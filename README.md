@@ -19,14 +19,15 @@ Explanation:
 You can replace "This text is in red" with any message you want to output in red.
 ````
 
-the `gpt` command will use your most recent messages and openai's responses as
-context, so you can have a chat-like interface just by calling it repeatedly.
+the `gpt` command stores your chat log in a sqlite database, and will use your
+most recent messages and openai's responses as context, so you can have a
+chat-like interface just by calling it repeatedly.
 
 Here's an example; first we ask gpt for a fibonacci-generating function, then
 we ask it to rewrite the previous answer in a recursive style:
 
 ````
-$ ./gpt write a function in python that outputs fibonacci numbers
+$ gpt write a function in python that outputs fibonacci numbers
 Sure, here's an example of a Python function that outputs Fibonacci numbers:
 
 ```python
@@ -49,7 +50,7 @@ print(fib)  # output: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 
 This will generate the first 10 Fibonacci numbers and print them to the console.
 
-$ ./gpt now rewrite that function to be recursive
+$ gpt now rewrite that function to be recursive
 Sure, here's an example of a recursive function that generates Fibonacci numbers in Python:
 
 ```python
