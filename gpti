@@ -169,23 +169,25 @@ EOF
     fi
 }
 
-case $1 in
-    help | -h | --help)
-        usage
-        ;;
-    -v | --verbose)
-        VERBOSE=true
-        shift
-        ;;
-    -vv | --very-verbose)
-        set -x
-        shift
-        ;;
-    -p | --api-key)
-        getSecret
-        exit 1
-        ;;
-esac
+while true; do
+    case $1 in
+        help | -h | --help)
+            usage
+            ;;
+        -v | --verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -vv | --very-verbose)
+            set -x
+            shift
+            ;;
+        -p | --api-key)
+            getSecret
+            exit 1
+            ;;
+    esac
+done
 
 if [[ -z $OPENAIKEY ]]; then
     tput setaf 1
