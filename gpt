@@ -15,7 +15,7 @@
 
 function usage {
     cat <<EOF
-gpt [-hpv] [-m <model>] [-t <temperature>] <description>
+gpt [-hpv] [-nc] [-m <model>] [-t <temperature>] <description>
 
 chat with openai's /chat/completions endpoint
 
@@ -23,6 +23,7 @@ FLAGS:
 
     -h, --help: print this help and exit
     -m, --model: set the model you want to use. Defaults to $MODEL
+    -nc, --no-context: do not send recent message context to openai
     -p, --api-key: print the openai API key found by this script and exit
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
     -v, --verbose: print the URL of the image and the filename when done
@@ -96,6 +97,7 @@ TEMPERATURE="0.7"
 VERBOSE=
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gpt-bash"
 DB="${DATA_DIR}/openai.sqlite3"
+ADD_CONTEXT=true
 
 # this function takes two parameters:
 # $1: the context fragment, which should be json-formatted according to this
@@ -107,7 +109,7 @@ function gptrequest {
   "model": "$MODEL",
   "messages": [
       {"role": "system", "content": "You are a helpful assistant."},
-      $1,
+      $1
       {
         "role": "user",
         "content": "$2"
@@ -123,9 +125,9 @@ function gpt {
     # chatgpt. Return them in the chat format documented here:
     # https://platform.openai.com/docs/guides/chat/introduction
     #
-    # TODO: allow the amount of context to be configurable
-    # TODO: allow the _presence_ of context to be optional
-    context=$(sqlite3 "$DB" <<EOF
+    # TODO: allow the amount of context to be configurable (?)
+    if [[ -n $ADD_CONTEXT ]]; then
+        context=$(sqlite3 "$DB" <<EOF
 WITH messages AS (
     SELECT JSON_OBJECT('role','user','content',query->'messages[0].content')
            || ',' ||
@@ -133,15 +135,16 @@ WITH messages AS (
            SUM(3*(LENGTH(content)/4) + 3*(LENGTH(query->'messages[0].content')/4))
                OVER (ORDER by rowid desc) AS approx_tokens
     FROM streaming_chat_completions ORDER BY rowid DESC)
-SELECT group_concat(context, ',') FROM messages WHERE approx_tokens < 2000;
+SELECT group_concat(context, ',') || ',' FROM messages WHERE approx_tokens < 2000;
 EOF
 )
+    fi
 
     # https://platform.openai.com/docs/api-reference/chat
     #
     # "$*" is a string composed of all arguments to this function, joined by
     # IFS (which is a space character at this point, so space-delimited)
-    request=$(gptrequest "$context" "$*")
+    request=$(gptrequest "${context:-}" "$*")
     rawresponsef=$(mktemp -t raw-gpt-responses)
     contentf=$(mktemp -t gpt-content)
 
@@ -199,33 +202,42 @@ EOF
     rm "$rawresponsef" "$contentf"
 }
 
-case $1 in
-    help | -h | --help)
-        usage
-        ;;
-    -m | --model)
-        shift
-        MODEL=$1
-        shift
-        ;;
-    -t | --temperature)
-        shift
-        TEMPERATURE=$1
-        shift
-        ;;
-    -v | --verbose)
-        VERBOSE=true
-        shift
-        ;;
-    -vv | --very-verbose)
-        set -x
-        shift
-        ;;
-    -p | --api-key)
-        getSecret
-        exit 1
-        ;;
-esac
+while true; do
+    case $1 in
+        help | -h | --help)
+            usage
+            ;;
+        -m | --model)
+            shift
+            MODEL=$1
+            shift
+            ;;
+        -t | --temperature)
+            shift
+            TEMPERATURE=$1
+            shift
+            ;;
+        -v | --verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -vv | --very-verbose)
+            set -x
+            shift
+            ;;
+        -p | --api-key)
+            getSecret
+            exit 1
+            ;;
+        -nc | --no-context)
+            ADD_CONTEXT=
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 if [[ -z $OPENAIKEY ]]; then
     tput setaf 1
