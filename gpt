@@ -63,11 +63,15 @@ function gpt {
     rawresponsef=$(mktemp -t raw-gpt-responses)
     contentf=$(mktemp -t gpt-content)
 
-
+    # make our request to openai, stream the response to the console, and tee
+    # both the raw responses and our output to temp files so we can save them.
+    # Store the start time and the finish time as well.
+    #
     # XXX: I don't know what the error format looks like in streaming mode, or
     # how to properly handle them
     start=$(date +"%Y-%m-%dT%H:%M:%S%z")
-    curl https://api.openai.com/v1/chat/completions -s \
+    curl https://api.openai.com/v1/chat/completions \
+        --silent --no-buffer \
         -H 'Content-Type: application/json' \
         -H "Authorization: Bearer $OPENAIKEY" \
         -d "$request" |
