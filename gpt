@@ -97,14 +97,21 @@ VERBOSE=
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gpt-bash"
 DB="${DATA_DIR}/openai.sqlite3"
 
+# this function takes two parameters:
+# $1: the context fragment, which should be json-formatted according to this
+#     document: https://platform.openai.com/docs/guides/chat/introduction
+# $2: the user's query as a string
 function gptrequest {
     cat <<EOF
 {
   "model": "$MODEL",
-  "messages": [{
-    "role": "user",
-    "content": "$@"
-  }],
+  "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      $1,
+      {
+        "role": "user",
+        "content": "$2"
+      }],
   "temperature": $TEMPERATURE,
   "stream": true
 }
@@ -112,10 +119,35 @@ EOF
 }
 
 function gpt {
+    # select approximately the last 2000 tokens' worth of context to send to
+    # chatgpt. Return them in the chat format documented here:
+    # https://platform.openai.com/docs/guides/chat/introduction
+    #
+    # TODO: allow the amount of context to be configurable
+    # TODO: allow the _presence_ of context to be optional
+    context=$(sqlite3 "$DB" <<EOF
+WITH messages AS (
+    SELECT JSON_OBJECT('role','user','content',query->'messages[0].content')
+           || ',' ||
+           JSON_OBJECT('role','assistant','content',content) as context,
+           SUM(3*(LENGTH(content)/4) + 3*(LENGTH(query->'messages[0].content')/4))
+               OVER (ORDER by rowid desc) AS approx_tokens
+    FROM streaming_chat_completions ORDER BY rowid DESC)
+SELECT group_concat(context, ',') FROM messages WHERE approx_tokens < 2000;
+EOF
+)
+
     # https://platform.openai.com/docs/api-reference/chat
-    request=$(gptrequest "$@")
+    #
+    # "$*" is a string composed of all arguments to this function, joined by
+    # IFS (which is a space character at this point, so space-delimited)
+    request=$(gptrequest "$context" "$*")
     rawresponsef=$(mktemp -t raw-gpt-responses)
     contentf=$(mktemp -t gpt-content)
+
+    if [[ -n $VERBOSE ]]; then
+        echo "request to openai: $request"
+    fi
 
     # make our request to openai, stream the response to the console, and tee
     # both the raw responses and our output to temp files so we can save them.

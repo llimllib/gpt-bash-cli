@@ -19,6 +19,63 @@ Explanation:
 You can replace "This text is in red" with any message you want to output in red.
 ````
 
+the `gpt` command will use your most recent messages and openai's responses as
+context, so you can have a chat-like interface just by calling it repeatedly.
+
+Here's an example; first we ask gpt for a fibonacci-generating function, then
+we ask it to rewrite the previous answer in a recursive style:
+
+````
+$ ./gpt write a function in python that outputs fibonacci numbers
+Sure, here's an example of a Python function that outputs Fibonacci numbers:
+
+```python
+def fibonacci(n):
+    """Generate the first n Fibonacci numbers."""
+    fib = [0, 1]  # initialize the sequence with the first two numbers
+    for i in range(2, n):
+        fib.append(fib[i-1] + fib[i-2])  # add the previous two numbers to generate the next one
+    return fib
+```
+
+This function takes the number `n` as an argument and returns a list of the first `n` Fibonacci numbers. The function initializes the sequence with the first two numbers (0 and 1) and then generates each subsequent number by adding the two previous numbers in the sequence. The resulting list of Fibonacci numbers is returned.
+
+You can call this function with an argument `n` to generate the first `n` Fibonacci numbers like this:
+
+```python
+fib = fibonacci(10)
+print(fib)  # output: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+```
+
+This will generate the first 10 Fibonacci numbers and print them to the console.
+
+$ ./gpt now rewrite that function to be recursive
+Sure, here's an example of a recursive function that generates Fibonacci numbers in Python:
+
+```python
+def fibonacci(n):
+    """Generate the n-th Fibonacci number."""
+    if n <= 1:
+        return n
+    else:
+        return fibonacci(n-1) + fibonacci(n-2)
+```
+
+This function takes the number `n` as an argument and returns the `n`-th Fibonacci number. If `n` is less than or equal to 1, the function simply returns `n`. Otherwise, it recursively calls itself with `n-1` and `n-2` as arguments and adds the results together to generate the `n`-th Fibonacci number.
+
+You can call this function with an argument `n` to generate the `n`-th Fibonacci number like this:
+
+```python
+fib = fibonacci(10)
+print(fib)  # output: 55
+```
+
+This will generate the 10th Fibonacci number (which is 55) and print it to the console.
+````
+
+Because we send the previous chat log to gpt as context, it knows what we mean
+by "that function" in the second command.
+
 ## Prerequisites
 
 These scripts assume you have [`curl`](https://curl.se) and
