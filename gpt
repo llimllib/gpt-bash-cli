@@ -108,12 +108,10 @@ function gptrequest {
 {
   "model": "$MODEL",
   "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      $1
-      {
-        "role": "user",
-        "content": "$2"
-      }],
+    {"role": "system", "content": "You are a helpful assistant."},
+    $1
+    {"role": "user", "content": "$2" }
+  ],
   "temperature": $TEMPERATURE,
   "stream": true
 }
