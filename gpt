@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 #
-# Installation (OS X):
+# Installation:
 #
 # - save this file as "gpt" somewhere in your path
 # - get an openai api key at: https://platform.openai.com/account/api-keys
-# - save the openai api key to your keychain with:
-#     security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'
-# - If you don't already have `jq`, install it with `brew install jq` or whatever
+# - make sure you have `jq` and are either on a mac or have `keyring` installed
+#   - jq: https://stedolan.github.io/jq/
+#   - keyring: https://github.com/jaraco/keyring
+# - on its first run, this script will prompt for your key and save it to
+#   system password storage so that you don't have to enter it in the future
 #
 # If you prefer, you can put your API key directly in here or modify the 
 # `OPENAIKEY` line to use your preferred secrets manager
-
-OPENAIKEY=$(security find-generic-password -w -s 'openai')
-MODEL="gpt-3.5-turbo"
-TEMPERATURE="0.7"
-VERBOSE=
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gpt-bash"
-DB="${DATA_DIR}/openai.sqlite3"
 
 function usage {
     cat <<EOF
@@ -26,10 +21,11 @@ chat with openai's /chat/completions endpoint
 
 FLAGS: 
 
-    -v, --verbose: print the URL of the image and the filename when done
     -h, --help: print this help and exit
     -m, --model: set the model you want to use. Defaults to $MODEL
+    -p, --api-key: print the openai API key found by this script and exit
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
+    -v, --verbose: print the URL of the image and the filename when done
 
 STORAGE:
 
@@ -42,6 +38,64 @@ EXAMPLE USAGE:
 EOF
 exit 1
 }
+
+RED=$(tput setaf 1)
+CLEAR=$(tput sgr0)
+
+function die {
+    printf '%s%s%s\n' "$RED" "$1" "$CLEAR"
+    exit 1
+}
+
+# Attempt to pull the openai key from system secret storage
+# - if the 'security' command is present, try that first
+#   - I'm using this first because it means the user doesn't have to install
+#     anything
+# - next, try using keyring
+#   - this wraps up a couple different password managers for linux
+#   - https://github.com/jaraco/keyring
+#
+# in either case, if the command returns an error, try to use the command to
+# store the API key
+function getSecret {
+    if command -v security &> /dev/null; then
+        if res=$(security find-generic-password -w -s openai 2>&1); then
+            echo "$res"
+        else
+            # gpt key not found, prompt user for it and save to keychain
+            read -r -s -p "Openai key: " apikey 
+            >&2 echo
+            security add-generic-password -s 'openai' -a 'gpt' -w "$apikey"
+            echo "$apikey"
+        fi
+        return 0
+    fi 
+
+    if command -v keyring &> /dev/null; then
+        if res=$(keyring get openai gpt 2>&1); then
+            echo "$res"
+        else
+            # gpt key not found, prompt user for it and save to keyring
+            read -r -s -p "Openai key: " apikey
+            >&2 echo
+            printf "%s\n" "$apikey" | keyring set openai gpt
+            echo "$apikey"
+        fi
+        return 0
+    fi
+
+    die "unable to find a suitable secret storage. Please install keyring:
+
+https://github.com/jaraco/keyring#installation---linux
+"
+}
+
+OPENAIKEY=$(getSecret | tail -n1)
+MODEL="gpt-3.5-turbo"
+TEMPERATURE="0.7"
+VERBOSE=
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gpt-bash"
+DB="${DATA_DIR}/openai.sqlite3"
 
 function gptrequest {
     cat <<EOF
@@ -134,6 +188,10 @@ case $1 in
     -vv | --very-verbose)
         set -x
         shift
+        ;;
+    -p | --api-key)
+        getSecret
+        exit 1
         ;;
 esac
 
