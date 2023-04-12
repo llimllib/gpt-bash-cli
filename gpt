@@ -51,7 +51,8 @@ function gptrequest {
     "role": "user",
     "content": "$@"
   }],
-  "temperature": $TEMPERATURE
+  "temperature": $TEMPERATURE,
+  "stream": true
 }
 EOF
 }
@@ -59,44 +60,53 @@ EOF
 function gpt {
     # https://platform.openai.com/docs/api-reference/chat
     request=$(gptrequest "$@")
-    if res=$(curl https://api.openai.com/v1/chat/completions -s \
+    rawresponsef=$(mktemp -t raw-gpt-responses)
+    contentf=$(mktemp -t gpt-content)
+
+
+    # XXX: I don't know what the error format looks like in streaming mode, or
+    # how to properly handle them
+    start=$(date +"%Y-%m-%dT%H:%M:%S%z")
+    curl https://api.openai.com/v1/chat/completions -s \
         -H 'Content-Type: application/json' \
         -H "Authorization: Bearer $OPENAIKEY" \
-        -d "$request"); then
+        -d "$request" |
+    tee "$rawresponsef" |
+    sed -u 's/^data: //g' |
+    jq --unbuffered -rj '.choices[0].delta.content // empty' 2>/dev/null |
+    tee "$contentf"
+    echo
+    finish=$(date +"%Y-%m-%dT%H:%M:%S%z")
 
-        # insert the request and response into the database. The funny-looking
-        # search and replaces turn single quotes (') into doubled single quotes
-        # (''), which is how sqlite wants you to escape them. It _seems_ that
-        # the only thing we need to escape are single quotes, but maybe this is
-        # an injection vector Iunno. Strings in bash, amirite?
-        sqlite3 "$DB" <<EOF
-INSERT INTO chat_completions VALUES(
-    '${request//"'"/"''"}',
-    '${res//"'"/"''"}');
-EOF
+    # if there was an error and these files don't exist, just store empty
+    # strings in these variables so that the result of the process still gets
+    # written to the database
+    rawresponse=$(cat "$rawresponsef" || echo -n)
+    content=$(cat "$contentf" || echo -n)
 
-        # if there's an "error" key in the return value, we didn't succeed.
-        # Print and quit
-        if echo "$res" | jq -e 'has("error")' &> /dev/null ; then
-            echo "error: $res"
-            exit 1
-        fi
-
-        # print the raw response from openai if verbose is set
-        if [[ -n $VERBOSE ]]; then
-            echo "response from openai: $res"
-        fi
-
-        echo "$res" | jq -r '.choices[0].message.content'
-    else
-        sqlite3 "$DB" <<EOF
-INSERT INTO images_generations VALUES( '${request//"'"/"''"}', '');
-EOF
-        tput setaf 1
-        echo "error: $res"
-        tput sgr0
-        exit 1
+    # print the raw response from openai if verbose is set
+    if [[ -n $VERBOSE ]]; then
+        echo "responses from openai: $rawresponse"
     fi
+
+    # insert the request and response into the database. The funny-looking
+    # search and replaces turn single quotes (') into doubled single quotes
+    # (''), which is how sqlite wants you to escape them. It _seems_ that
+    # the only thing we need to escape are single quotes, but maybe this is
+    # an injection vector Iunno. Strings in bash, amirite?
+    sqlite3 "$DB" <<EOF
+INSERT INTO streaming_chat_completions
+    (query, raw_responses, content, started_at, finished_at)
+    VALUES(
+        '${request//"'"/"''"}',
+        '${rawresponse//"'"/"''"}',
+        '${content//"'"/"''"}',
+        '$start',
+        '$finish');
+EOF
+    
+    # clean up our temp files
+    rm "$rawresponsef" "$contentf"
 }
 
 case $1 in
@@ -137,14 +147,14 @@ if [ ! -d "$DATA_DIR" ]; then
     mkdir -p "$DATA_DIR"
 fi
 
-# if our table doesn't exist, create a table to use. I'm YOLOing versioning
-# here
 sqlite3 "$DB" <<EOF
-CREATE TABLE IF NOT EXISTS chat_completions(
-    query text,   -- the JSON query sent to openai
-    response text -- the JSON response received from openai
+CREATE TABLE IF NOT EXISTS streaming_chat_completions(
+    query text,         -- the JSON query sent to openai
+    raw_responses text, -- the full JSON transcript of our communication with openai
+    content text,       -- the content we pulled out of raw_responses
+    started_at text,    -- the date and time the request was made
+    finished_at text    -- the date and time the request was completed
 );
 EOF
-
 
 gpt "$@"
