@@ -125,6 +125,9 @@ function gpt {
     # chatgpt. Return them in the chat format documented here:
     # https://platform.openai.com/docs/guides/chat/introduction
     #
+    # token estimate as 3/4 character length from here:
+    # https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
+    #
     # TODO: allow the amount of context to be configurable (?)
     if [[ -n $ADD_CONTEXT ]]; then
         context=$(sqlite3 "$DB" <<EOF
