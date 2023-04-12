@@ -77,6 +77,25 @@ This will generate the 10th Fibonacci number (which is 55) and print it to the c
 Because we send the previous chat log to gpt as context, it knows what we mean
 by "that function" in the second command.
 
+## Quotes
+
+`gpt` allows you to call it without quoting your arguments, but if you want to
+include a quote character in your queries that won't work. In that case, you
+can quote your argument to it and it will work as expected:
+
+```
+$ gpt "tell me why bash's quoting rules are the best"
+```
+
+will work, but:
+
+```
+$ gpt tell me why bash's quoting rules are the best
+>
+```
+
+will leave bash waiting for you to finish your quoted string.
+
 ## Prerequisites
 
 These scripts assume you have [`curl`](https://curl.se) and
