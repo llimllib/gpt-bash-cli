@@ -21,24 +21,21 @@ You can replace "This text is in red" with any message you want to output in red
 
 ## Prerequisites
 
-These scripts assume you have `curl` and `jq` available.
+These scripts assume you have [`curl`](https://curl.se) and
+[`jq`](https://stedolan.github.io/jq/) available.
 
 ## OpenAI API keys
 
 You will need an OpenAI api key. Get one from
 https://platform.openai.com/account/api-keys
 
-If you want to store your API key securely in the OS X Keychain save it to your
-keychain with:
+On its first run, the script will ask you for your key, and attempt to store it
+in your system's key store.
 
-```bash
-security add-generic-password -s 'openai' -a '<account name>' -w '<api key>'
-```
-
-If you do so, these scripts will pull your API key out of your keychain.
-
-Alternately, edit each script and set `OPENAIKEY` at the top to the value of
-your key.
+- On a mac, you shouldn't need to install anything. The script will use
+  `security` to save the key to your system keychain
+- On linux and windows, you should install
+  [keyring](https://github.com/jaraco/keyring#installation---linux)
 
 ## Installation
 
@@ -65,21 +62,22 @@ Each script has help output documenting all options.
 ### gpt
 
 ```
-gpt [-vh] [-m <model>] [-t <temperature>] <description>
+gpt [-vhp] [-m <model>] [-t <temperature>] <description>
 
 chat with openai's /chat/completions endpoint
 
 FLAGS:
 
-    -v, --verbose: print the URL of the image and the filename when done
     -h, --help: print this help and exit
     -m, --model: set the model you want to use. Defaults to $MODEL
+    -p, --api-key: print the openai API key found by this script and exit
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
+    -v, --verbose: print the URL of the image and the filename when done
 
 STORAGE:
 
     This script will store all requests to and responses from openai in a
-    sqlite database in $DATA_DIR, in the "chat_completions" table
+    sqlite database in $DATA_DIR, in the "streaming_chat_completions" table
 
 EXAMPLE USAGE:
 
@@ -89,22 +87,30 @@ EXAMPLE USAGE:
 ### gpti
 
 ```
-gpti [-vh] <description>
+gpti [-vhp] <description>
 
 generates an image via openai's /images/generations endpoint
 
 FLAGS:
 
-    -v, --verbose: print the URL of the image and the filename when done
     -h, --help: print this help and exit
+    -p, --api-key: print the openai API key found by this script and exit
+    -v, --verbose: print the URL of the image and the filename when done
+
+EXAMPLE USAGE:
+
+    gpti a drone photo of fenway park on opening day
 
 STORAGE:
 
     This script will store all requests to and responses from openai in a
     sqlite database in $DATA_DIR, in the "images_generations" table
 
-EXAMPLE USAGE:
-    gpti a drone photo of fenway park on opening day
+NOTE:
+
+    All images are downloaded into your temp directory and the filename
+    will begin with `gpti_<day>_<time>` so that you can find them later
+    if you need them.
 ```
 
 ## Examples

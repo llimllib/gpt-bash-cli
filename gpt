@@ -15,7 +15,7 @@
 
 function usage {
     cat <<EOF
-gpt [-vh] [-m <model>] [-t <temperature>] <description>
+gpt [-hpv] [-m <model>] [-t <temperature>] <description>
 
 chat with openai's /chat/completions endpoint
 
@@ -30,7 +30,7 @@ FLAGS:
 STORAGE:
 
     This script will store all requests to and responses from openai in a
-    sqlite database in $DATA_DIR, in the "chat_completions" table
+    sqlite database in $DATA_DIR, in the "streaming_chat_completions" table
 
 EXAMPLE USAGE:
 

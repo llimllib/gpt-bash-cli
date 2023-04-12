@@ -15,7 +15,7 @@
 
 function usage {
     cat <<"EOF"
-gpti [-vh] <description>
+gpti [-vhp] <description>
 
 generates an image via openai's /images/generations endpoint
 
