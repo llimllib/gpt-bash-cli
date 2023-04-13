@@ -104,13 +104,16 @@ ADD_CONTEXT=true
 #     document: https://platform.openai.com/docs/guides/chat/introduction
 # $2: the user's query as a string
 function gptrequest {
+    # use jq to sanitize $2 into a json string
+    content=$(jq -n --arg x "$2" '$x')
+
     cat <<EOF
 {
   "model": "$MODEL",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
     $1
-    {"role": "user", "content": "$2" }
+    {"role": "user", "content": $content }
   ],
   "temperature": $TEMPERATURE,
   "stream": true
@@ -264,4 +267,10 @@ CREATE TABLE IF NOT EXISTS streaming_chat_completions(
 );
 EOF
 
-gpt "$@"
+# if we're running in a pipe, consume stdin and add it to the prompt.
+# Otherwise, run gpt with just the arguments we received
+if [ ! -t 0 ]; then
+    gpt "$@" $'\n' "$(cat)"
+else
+    gpt "$@"
+fi
