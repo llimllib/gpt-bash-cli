@@ -77,6 +77,21 @@ This will generate the 10th Fibonacci number (which is 55) and print it to the c
 Because we send the previous chat log to gpt as context, it knows what we mean
 by "that function" in the second command.
 
+## Stdin
+
+If you pipe data to gpt, it will be appended to the end of your query. This lets
+you do something like this:
+
+```
+$ git diff | gpt write a commit message for this diff
+```
+
+or:
+
+```
+$ ls *.png | gpt give me an imagemagick command that will concatenate these images vertically:
+```
+
 ## Quotes
 
 `gpt` allows you to call it without quoting your arguments, but if you want to
@@ -139,7 +154,7 @@ Each script has help output documenting all options.
 ### gpt
 
 ```
-gpt [-vhp] [-m <model>] [-t <temperature>] <description>
+gpt [-hpv] [-nc] [-m <model>] [-t <temperature>] <description>
 
 chat with openai's /chat/completions endpoint
 
@@ -147,6 +162,7 @@ FLAGS:
 
     -h, --help: print this help and exit
     -m, --model: set the model you want to use. Defaults to $MODEL
+    -nc, --no-context: do not send recent message context to openai
     -p, --api-key: print the openai API key found by this script and exit
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
     -v, --verbose: print the URL of the image and the filename when done
@@ -158,7 +174,18 @@ STORAGE:
 
 EXAMPLE USAGE:
 
-    gpt write a bash script that uses curl to access the openai API
+    you don't need to quote the arguments to gpt:
+
+gpt write a bash script that uses curl to access the openai API
+
+    you can pipe input into it, and it will be appended to the end of your
+    query:
+
+git diff | gpt -nc write a commit message for the following diff:
+
+    if you have quotes in your query, you may need to quote it:
+
+gpt "tell me why bash's quote handling is great"
 ```
 
 ### gpti

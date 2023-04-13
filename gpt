@@ -35,7 +35,18 @@ STORAGE:
 
 EXAMPLE USAGE:
 
-    gpt write a bash script that uses curl to access the openai API
+    you don't need to quote the arguments to gpt:
+
+gpt write a bash script that uses curl to access the openai API
+
+    you can pipe input into it, and it will be appended to the end of your
+    query:
+
+git diff | gpt -nc write a commit message for the following diff:
+
+    if you have quotes in your query, you may need to quote it:
+
+gpt "tell me why bash's quote handling is great"
 EOF
 exit 1
 }
