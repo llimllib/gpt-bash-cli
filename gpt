@@ -71,20 +71,20 @@ function die {
 # store the API key
 function getSecret {
     if command -v security &> /dev/null; then
-        if res=$(security find-generic-password -w -s openai 2>&1); then
+        if res=$(security find-generic-password -w -s openai 2>&1) && [[ -n $res ]]; then
             echo "$res"
         else
             # gpt key not found, prompt user for it and save to keychain
             read -r -s -p "Openai key: " apikey 
             >&2 echo
-            security add-generic-password -s 'openai' -a 'gpt' -w "$apikey"
+            security add-generic-password -U -s 'openai' -a 'gpt' -w "$apikey"
             echo "$apikey"
         fi
         return 0
     fi 
 
     if command -v keyring &> /dev/null; then
-        if res=$(keyring get openai gpt 2>&1); then
+        if res=$(keyring get openai gpt 2>&1) && [[ -n $res ]]; then
             echo "$res"
         else
             # gpt key not found, prompt user for it and save to keyring
