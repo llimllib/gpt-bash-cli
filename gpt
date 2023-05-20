@@ -160,8 +160,11 @@ EOF
     # "$*" is a string composed of all arguments to this function, joined by
     # IFS (which is a space character at this point, so space-delimited)
     request=$(gptrequest "${context:-}" "$*")
-    rawresponsef=$(mktemp -t raw-gpt-responses)
-    contentf=$(mktemp -t gpt-content)
+
+    # linux mktemp requires at least three Xs; bsd (and os x) mktemp will
+    # ignore the Xs
+    rawresponsef=$(mktemp -t raw-gpt-responses-XXXXXX)
+    contentf=$(mktemp -t gpt-content-XXXXXX)
 
     if [[ -n $VERBOSE ]]; then
         echo "request to openai: $request"

@@ -113,7 +113,7 @@ EOF
 
 function gpti {
     dt=$(date +"%Y%m%d_%H%M")
-    f="$(mktemp -t "gpti_$dt").png"
+    f="$(mktemp -t "gpti_XXXXXX_$dt").png"
     request=$(gptirequest "$@")
     # https://platform.openai.com/docs/api-reference/images
     if res=$(curl https://api.openai.com/v1/images/generations -s \
