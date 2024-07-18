@@ -2,6 +2,8 @@
 
 An extremely simple interface to the openai API, written in bash. Here's an example usage:
 
+**status**: this command works, but I've transitioned to using [simonw/llm](https://github.com/simonw/llm) which supports other models and functions similarly to this command. I will consider PRs if they're filed but it's not under active development
+
 ````
 $ gpt how do I output red text in the console using tput
 To output red text in the console using tput, you can use the following command:
