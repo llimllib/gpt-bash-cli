@@ -26,7 +26,7 @@ FLAGS:
     -nc, --no-context: do not send recent message context to openai
     -p, --api-key: print the openai API key found by this script and exit
     -t, --temperature: set the temperature. Defaults to $TEMPERATURE
-    -v, --verbose: print the URL of the image and the filename when done
+    -v, --verbose: print verbose debugging information
 
 STORAGE:
 
